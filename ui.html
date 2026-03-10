@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>FocusPath</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2D6EFA;--accent-dk:#1A4FD6;--accent-lt:#5B8EFB;
+  --green:#16A34A;--green-lt:#22C55E;--red:#DC2626;
+  --ink:#0D1A2D;--ink2:#2E4A6B;--ink3:#7A96B8;
+  --bg:#F4F8FF;--surf:#FFFFFF;--surf2:#EEF4FF;--surf3:#DDE8FF;--hdr:#EAF0FB;
+  --bdr:rgba(45,110,250,.13);--bdr2:rgba(45,110,250,.24);
+  --font:'Inter','Inter UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Fira Code','Consolas',monospace;
+  --r:9px;--rs:7px;
+  --sh:0 1px 3px rgba(13,26,45,.07),0 1px 2px rgba(13,26,45,.04);
+  --shf:0 0 0 3px rgba(45,110,250,.2);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{width:560px;height:100%;overflow:hidden;}
+body{
+  font-family:var(--font);background:var(--bg);color:var(--ink);
+  width:560px;height:100vh;display:flex;flex-direction:column;
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden;
+}
+
+/* HEADER */
+.hdr{
+  background:var(--hdr);border-bottom:1.5px solid var(--bdr2);
+  padding:11px 18px 10px;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;width:100%;
+}
+.logo-wrap{display:flex;align-items:center;gap:10px;}
+.fp-icon{
+  width:32px;height:30px;flex-shrink:0;background:#2D6EFA;
+  border-radius:7px;display:flex;align-items:center;justify-content:center;padding:4px;
+}
+.fp-icon svg{width:24px;height:19px;display:block;}
+.logo-text{display:flex;flex-direction:column;gap:1px;}
+.logo-name{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.25px;line-height:1;}
+.logo-sub{font-size:9px;font-weight:500;color:var(--ink3);letter-spacing:.3px;}
+.e-side{display:flex;align-items:center;}
+.e-logo{height:16px;width:auto;flex-shrink:0;display:block;}
+
+/* TAB BAR */
+.tab-bar{
+  display:flex;background:var(--hdr);
+  border-bottom:1.5px solid var(--bdr2);flex-shrink:0;padding:0 18px;
+}
+.tab{
+  padding:9px 13px;font-size:11.5px;font-weight:600;color:var(--ink3);
+  cursor:pointer;border-bottom:2.5px solid transparent;
+  transition:color .13s,border-color .13s;user-select:none;white-space:nowrap;
+}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.tab:hover:not(.on){color:var(--ink2);}
+
+/* SCROLLABLE BODY */
+.body{
+  flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg);
+  scrollbar-width:thin;scrollbar-color:rgba(45,110,250,.2) transparent;
+}
+.body::-webkit-scrollbar{width:4px;}
+.body::-webkit-scrollbar-thumb{background:rgba(45,110,250,.2);border-radius:4px;}
+
+/* PANES */
+.pane{display:none;}
+.pane.on{display:block;}
+
+/* SECTIONS */
+.sec{padding:14px 18px 0;}
+.sec-last{padding-bottom:18px;}
+.sep{height:1px;background:var(--bdr);margin:14px 18px 0;}
+.sec-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.sec-pip{width:3px;height:13px;border-radius:2px;background:var(--accent);flex-shrink:0;}
+.sec-label{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ink3);}
+.sec-info{font-size:9px;font-weight:600;color:var(--ink3);margin-left:auto;background:var(--surf3);border:1px solid var(--bdr2);border-radius:5px;padding:2px 7px;}
+
+/* SELECTION BAR */
+.sel-bar{
+  background:var(--surf);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);padding:9px 13px;
+  display:flex;align-items:center;gap:10px;box-shadow:var(--sh);
+}
+.sel-dot{width:7px;height:7px;border-radius:50%;background:var(--green-lt);flex-shrink:0;}
+.sel-dot.none{background:var(--ink3);}
+.sel-count{font-size:12px;font-weight:700;color:var(--ink);}
+.sel-names{font-size:11px;color:var(--ink3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+/* INPUTS */
+.inp-wrap{display:flex;flex-direction:column;gap:4px;}
+.inp-label{font-size:10.5px;font-weight:600;color:var(--ink2);}
+.inp-shell{
+  display:flex;align-items:center;
+  background:var(--surf);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);box-shadow:var(--sh);overflow:hidden;
+  transition:border-color .13s,box-shadow .13s;
+}
+.inp-shell:focus-within{border-color:var(--accent);box-shadow:var(--shf);}
+.inp-in{
+  flex:1;border:none;outline:none;padding:8px 10px;
+  font-family:var(--font);font-size:13px;font-weight:600;color:var(--ink);
+  background:transparent;min-width:0;
+}
+.inp-in::placeholder{color:var(--ink3);font-weight:400;}
+.inp-unit{padding:0 10px 0 0;font-size:11px;font-weight:600;color:var(--ink3);flex-shrink:0;user-select:none;}
+
+/* SELECT */
+.sel-shell{
+  position:relative;display:flex;align-items:center;
+  background:var(--surf);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);box-shadow:var(--sh);overflow:hidden;
+  transition:border-color .13s,box-shadow .13s;
+}
+.sel-shell:focus-within{border-color:var(--accent);box-shadow:var(--shf);}
+.sel-in{
+  flex:1;border:none;outline:none;padding:8px 28px 8px 10px;
+  font-family:var(--font);font-size:12px;font-weight:600;color:var(--ink);
+  background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer;
+}
+.sel-arrow{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink3);}
+
+/* TEXTAREA */
+.ta-shell{
+  background:var(--surf);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);box-shadow:var(--sh);overflow:hidden;
+  transition:border-color .13s,box-shadow .13s;
+}
+.ta-shell:focus-within{border-color:var(--accent);box-shadow:var(--shf);}
+.ta-in{
+  width:100%;border:none;outline:none;padding:9px 10px;
+  font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink);
+  background:transparent;resize:vertical;min-height:60px;
+}
+.ta-in::placeholder{color:var(--ink3);font-weight:400;}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.toggle-lbl{font-size:12px;font-weight:600;color:var(--ink2);flex:1;}
+.toggle{
+  width:36px;height:20px;border-radius:10px;background:var(--surf3);
+  border:1.5px solid var(--bdr2);cursor:pointer;position:relative;
+  transition:background .15s,border-color .15s;flex-shrink:0;
+}
+.toggle.on{background:var(--accent);border-color:var(--accent);}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:12px;height:12px;border-radius:50%;background:#fff;
+  transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+.toggle.on::after{transform:translateX(16px);}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;}
+.btn{
+  flex:1;padding:9px 14px;
+  font-family:var(--font);font-size:13px;font-weight:700;
+  border:none;border-radius:var(--rs);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:background .13s,transform .13s,opacity .13s;white-space:nowrap;
+}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-prim{background:var(--accent);color:#fff;}
+.btn-prim:hover:not(:disabled){background:var(--accent-dk);}
+.btn-ghost{background:var(--surf2);color:var(--ink2);border:1.5px solid var(--bdr2);}
+.btn-ghost:hover:not(:disabled){background:var(--surf3);border-color:var(--accent);}
+.btn-danger{background:#FEF2F2;color:var(--red);border:1.5px solid #FECACA;}
+.btn-danger:hover:not(:disabled){background:#FEE2E2;}
+.btn-green{background:#F0FDF4;color:var(--green);border:1.5px solid #BBF7D0;}
+.btn-green:hover:not(:disabled){background:#DCFCE7;}
+
+/* FOCUS ORDER LIST */
+.fp-list{
+  background:var(--surf);border:1.5px solid var(--bdr);
+  border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);
+}
+.fp-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;border-bottom:1px solid var(--bdr);transition:background .1s;
+}
+.fp-item:last-child{border-bottom:none;}
+.fp-item:hover{background:var(--surf2);}
+.fp-num{
+  width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fp-name{font-size:12px;font-weight:600;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fp-type{font-size:10px;color:var(--ink3);}
+.fp-del{
+  width:18px;height:18px;border-radius:50%;background:none;border:1px solid var(--bdr2);
+  color:var(--ink3);cursor:pointer;font-size:11px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .1s,color .1s;flex-shrink:0;
+}
+.fp-del:hover{background:#FEE2E2;color:var(--red);border-color:#FECACA;}
+.fp-empty{padding:20px;text-align:center;font-size:12px;color:var(--ink3);font-style:italic;}
+
+/* NARRATOR */
+.nar-item{
+  display:flex;align-items:flex-start;gap:10px;padding:8px 12px;
+  border-bottom:1px solid var(--bdr);background:var(--surf);
+}
+.nar-item:last-child{border-bottom:none;}
+.nar-badge{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;
+  background:var(--surf3);color:var(--accent);font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;border:1.5px solid var(--bdr2);
+}
+.nar-text{font-size:12px;font-weight:600;color:var(--ink);}
+.nar-role{font-size:10px;color:var(--ink3);}
+
+/* CONTRAST TABLE */
+.ct-wrap{
+  background:var(--surf);border:1.5px solid var(--bdr);
+  border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);
+}
+.ct-hdr-row,.ct-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 64px 52px 52px 72px;
+  align-items:center;
+}
+.ct-hdr-row{background:var(--surf3);min-height:26px;}
+.ct-row{border-bottom:1px solid var(--bdr);min-height:40px;}
+.ct-row:last-child{border-bottom:none;}
+.ct-hdr{font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);padding:4px 8px;}
+.ct-name{font-size:11.5px;font-weight:600;color:var(--ink);padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ct-ratio{font-size:12px;font-weight:700;padding:4px 6px;}
+.ct-cell{padding:4px 6px;}
+.ct-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;display:inline-block;}
+.ct-badge.pass{background:#DCFCE7;color:var(--green);}
+.ct-badge.fail{background:#FEE2E2;color:var(--red);}
+.ct-swatch{width:28px;height:22px;border-radius:4px;border:1px solid var(--bdr2);display:inline-block;vertical-align:middle;}
+.ct-heal{
+  font-size:10px;font-weight:700;color:var(--accent);
+  background:var(--surf2);border:1px solid var(--bdr2);
+  border-radius:5px;padding:3px 7px;cursor:pointer;
+  transition:background .12s,border-color .12s;white-space:nowrap;
+}
+.ct-heal:hover{background:var(--surf3);border-color:var(--accent);}
+
+/* ROLE CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{
+  padding:4px 10px;font-size:11px;font-weight:600;
+  background:var(--surf);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);cursor:pointer;color:var(--ink3);
+  transition:all .12s;user-select:none;
+}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.chip:hover:not(.on){border-color:var(--accent);color:var(--accent);}
+
+/* CODE BLOCK */
+.code-box{background:var(--ink);border-radius:var(--r);overflow:hidden;position:relative;}
+.code-box pre{padding:14px;font-family:var(--mono);font-size:11px;color:#C9D7F0;line-height:1.75;overflow-x:auto;white-space:pre;}
+.code-copy{
+  position:absolute;top:8px;right:8px;padding:4px 10px;font-size:10px;font-weight:700;
+  background:rgba(255,255,255,.1);color:#C9D7F0;border:none;border-radius:5px;cursor:pointer;
+  transition:background .12s;font-family:var(--font);
+}
+.code-copy:hover{background:rgba(255,255,255,.2);}
+.code-copy.done{background:rgba(22,163,74,.4);color:#fff;}
+
+/* ARIA SAVED BADGE */
+.saved-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#DCFCE7;color:var(--green);
+  font-size:10px;font-weight:700;border-radius:5px;padding:2px 8px;margin-left:auto;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:8px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;font-size:12px;font-weight:600;
+  padding:8px 18px;border-radius:20px;opacity:0;
+  transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:999;
+}
+.toast.show{opacity:1;}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--red);}
+
+/* FOOTER */
+.ftr{
+  background:var(--surf);
+  padding:7px 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  flex-shrink:0;
+  border-top:1px solid var(--bdr);
+}
+.ftr-copy{font-size:10px;font-weight:500;color:var(--ink3);}
+.ftr-copy b{font-weight:700;color:var(--ink2);}
+.wa-btn{
+  display:flex;align-items:center;gap:5px;
+  background:#22C55E;border:none;border-radius:100px;cursor:pointer;
+  padding:4px 11px;font-family:var(--font);font-size:10.5px;font-weight:700;color:#fff;
+  text-decoration:none;white-space:nowrap;
+  box-shadow:0 2px 7px rgba(34,197,94,.28);
+  transition:background .12s,transform .12s;
+}
+.wa-btn:hover{background:#16A34A;transform:translateY(-1px);}
+
+/* HINT TEXT */
+.hint{font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:10px;}
+.hint strong{color:var(--ink2);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo-wrap">
+    <div class="fp-icon">
+      <!-- Real focuspath.svg — eye + path line -->
+      <svg viewBox="0 0 93 74" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18.8892 37H74.1104M76.5 37C76.5 37 63.0685 57 46.5 57C29.9315 57 16.5 37 16.5 37C16.5 37 29.9315 17 46.5 17C63.0685 17 76.5 37 76.5 37Z" stroke="white" stroke-width="5"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-name">FocusPath</span>
+      <span class="logo-sub">ACCESSIBILITY AUTHORING · FIGMA</span>
+    </div>
+  </div>
+  <!-- Elustra wordmark — all 7 paths, #2D6EFA -->
+  <div class="e-side">
+    <svg class="e-logo" viewBox="0 0 275 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Elustra">
+      <path d="M15.1085 25.5591L34.8545 25.2343V32.1673L15.1085 31.8425V50.4685H31.9209L36.7953 49.5837L38.7473 42.4827L42.8094 42.0795C42.753 43.0987 42.6965 44.174 42.6514 45.3052C42.595 46.2684 42.5386 47.3101 42.4934 48.4077C42.437 49.5053 42.4145 50.6029 42.4145 51.6782C42.4145 52.5966 42.437 53.5486 42.4934 54.5455C42.5499 55.5423 42.6063 56.4159 42.6514 57.1663C42.7078 58.1296 42.753 59.0704 42.8094 59.9888L38.7473 59.5072L38.4201 58.4544C38.2621 58.1296 38.0365 57.8719 37.7657 57.6927C37.4949 57.5023 37.2015 57.4127 36.8743 57.4127H0.0789841L0.485188 53.3806L5.1114 51.5214L6.65723 47.6461V9.43065C6.65723 9.16185 6.58953 8.89304 6.45413 8.62423C6.31873 8.35542 6.05921 8.16502 5.68685 8.06422L0.406204 6.60818L0 2.57607H33.6359C33.9632 2.57607 34.2565 2.49767 34.5273 2.32966C34.7981 2.17286 35.0125 1.90405 35.1818 1.52324L35.43 0.470413L39.492 -0.0112C39.4356 0.851223 39.3792 1.71365 39.3341 2.56487C39.2777 3.25929 39.2212 4.06571 39.1761 4.98413C39.131 5.90256 39.0971 6.80978 39.0971 7.72821C39.0971 8.80344 39.1197 9.87866 39.1761 10.9539C39.2325 12.0291 39.2889 13.0259 39.3341 13.9332C39.3905 14.8964 39.4469 15.8708 39.492 16.8341L35.43 16.4308L33.478 10.3827L28.6035 9.49785H15.9209L15.1085 13.3732V25.5591Z" fill="#2D6EFA"/>
+      <path d="M57.9287 7.90741C57.9287 7.42579 57.8159 7.05618 57.6015 6.82098C57.3871 6.57457 56.9809 6.46257 56.3829 6.46257H52.5691L52.1629 3.31528L63.1191 0.156799L67.5084 2.32966L66.1318 9.99066V50.4797C66.1318 50.8045 66.2221 51.107 66.4139 51.4094C66.6057 51.7006 66.8652 51.9022 67.1812 52.0142L72.3038 53.3806L72.71 57.4127C71.2432 57.3567 69.7876 57.2783 68.3208 57.1663C67.0796 57.1663 65.8046 57.1439 64.507 57.0879C63.2094 57.0319 62.0923 57.0095 61.1784 57.0095C60.2644 57.0095 59.1925 57.0319 57.9739 57.0879C56.7553 57.1439 55.5818 57.1663 54.4422 57.1663C53.201 57.2783 51.8921 57.3567 50.5381 57.4127L50.9443 53.3806L57.0373 51.443L57.9287 46.6044V7.90741Z" fill="#2D6EFA"/>
+      <path d="M77.1787 22.5798L76.7725 19.4325L87.8979 16.2852L92.2872 18.4581L90.8203 26.1191V46.0332C90.8203 48.1277 91.1927 49.6509 91.96 50.5918C92.716 51.5326 93.8556 52.003 95.3676 52.003C96.6087 52.003 97.8951 51.723 99.2265 51.1518C100.558 50.5918 101.81 49.9421 103.006 49.2141C104.191 48.4861 105.241 47.7805 106.132 47.0749C107.023 46.3692 107.633 45.8652 107.96 45.5404V24.0359C107.96 23.5542 107.847 23.1846 107.633 22.9494C107.418 22.703 107.012 22.591 106.414 22.591H102.431L102.025 19.4437L113.15 16.2964L117.54 18.4693L116.073 26.1303V50.4798C116.073 50.8046 116.163 51.0958 116.355 51.3646C116.547 51.6334 116.829 51.8462 117.212 52.0142L121.353 53.3806L121.76 57.4127C120.349 57.3567 118.939 57.2783 117.54 57.1663C116.343 57.1663 115.114 57.1551 113.839 57.1215C112.564 57.0991 111.469 57.0767 110.544 57.0767L107.621 52.7198L107.7 51.5886C105.692 53.5262 103.379 55.1727 100.75 56.5503C98.1207 57.9168 95.3789 58.6112 92.5016 58.6112C89.3648 58.6112 86.9388 57.6815 85.235 55.8335C83.5312 53.9854 82.6737 51.275 82.6737 47.7245V24.0359C82.6737 23.5542 82.5609 23.1846 82.3465 22.9494C82.1321 22.703 81.7259 22.591 81.1279 22.591H77.1448L77.1787 22.5798Z" fill="#2D6EFA"/>
+      <path d="M153.906 28.4264C152.958 29.4792 151.83 30.2632 150.532 30.8008C149.28 30.2632 148.174 29.468 147.203 28.4264C146.233 27.3735 145.421 26.2647 144.766 25.0775C145.037 24.5959 145.33 24.1254 145.658 23.6662C145.985 23.207 146.335 22.7702 146.718 22.3334C145.962 22.0086 145.24 21.7846 144.563 21.6502C143.886 21.5158 143.164 21.4486 142.408 21.4486C140.512 21.4486 139.012 21.8518 137.895 22.6582C136.789 23.4646 136.225 24.4838 136.225 25.7271C136.225 26.5895 136.507 27.3847 137.082 28.1015C137.646 28.8296 138.391 29.5128 139.316 30.1624C140.242 30.812 141.347 31.4504 142.645 32.1001C143.943 32.7497 145.33 33.4441 146.786 34.1945C148.14 34.8889 149.449 35.6393 150.724 36.4122C151.999 37.1962 153.105 38.0474 154.052 38.9882C155 39.9291 155.768 41.0267 156.366 42.2923C156.964 43.558 157.257 45.0252 157.257 46.6828C157.257 48.3405 156.896 49.9085 156.162 51.3646C155.429 52.8206 154.391 54.075 153.037 55.1503C151.683 56.2255 150.081 57.0767 148.242 57.6927C146.402 58.3088 144.371 58.6224 142.148 58.6224C140.309 58.6224 138.56 58.4096 136.913 57.9727C135.266 57.5471 133.776 56.9759 132.445 56.2815C131.113 55.5871 129.929 54.7583 128.868 53.8174C127.807 52.8766 126.927 51.891 126.228 50.8718L129.804 47.0861C131.7 49.1805 133.675 50.6702 135.739 51.5662C137.793 52.451 139.824 52.899 141.833 52.899C144.112 52.899 145.883 52.3726 147.158 51.331C148.433 50.2781 149.065 49.0573 149.065 47.6573C149.065 46.694 148.806 45.854 148.298 45.1596C147.779 44.4652 147.034 43.8044 146.064 43.1884C145.093 42.5723 143.852 41.9115 142.363 41.2171C140.873 40.5227 139.158 39.6267 137.206 38.5514C136.337 38.1258 135.378 37.5546 134.318 36.8602C133.257 36.1658 132.253 35.3257 131.316 34.3625C130.369 33.3993 129.579 32.2793 128.958 31.0136C128.338 29.748 128.022 28.3144 128.022 26.7015C128.022 25.0887 128.349 23.6886 128.992 22.3446C129.646 21.0006 130.549 19.8581 131.711 18.9173C132.873 17.9765 134.295 17.2373 135.976 16.6996C137.658 16.162 139.474 15.8932 141.415 15.8932C144.935 15.8932 147.892 16.6884 150.273 18.2677C152.653 19.8581 154.684 22.1206 156.366 25.0775C155.666 26.2647 154.831 27.3735 153.883 28.4264H153.906Z" fill="#2D6EFA"/>
+      <path d="M169.545 22.9046L162.154 23.3078V18.1445L169.545 17.1813L171.982 5.00653H177.669V17.1813L192.45 17.1029V23.3078L177.669 23.0614V45.798C177.669 47.6797 177.985 49.1021 178.606 50.0765C179.226 51.0398 180.4 51.5326 182.137 51.5326C183.277 51.5326 184.45 51.3086 185.669 50.8494C186.888 50.3901 188.445 49.5725 190.34 48.3853L192.45 52.7422C190.498 54.7359 188.467 56.2143 186.357 57.1775C184.247 58.1407 182.182 58.6336 180.185 58.6336C178.718 58.6336 177.342 58.3648 176.044 57.8271C174.747 57.2895 173.607 56.5391 172.637 55.5647C171.666 54.6014 170.899 53.4366 170.357 52.0926C169.816 50.7485 169.545 49.2701 169.545 47.6573V22.9046Z" fill="#2D6EFA"/>
+      <path d="M205.133 24.0358C205.133 23.5542 205.02 23.1846 204.806 22.9494C204.591 22.703 204.185 22.591 203.587 22.591H199.773L199.367 19.4437L210.335 16.2964L214.724 18.4693L214.069 22.3446C215.909 20.5749 218.007 19.0517 220.366 17.7861C222.724 16.5204 225.251 15.8932 227.959 15.8932C229.313 16.5876 230.453 17.3941 231.367 18.3125C232.292 19.2309 233.105 20.3285 233.804 21.6166C233.15 22.8038 232.337 23.9238 231.367 24.9991C230.397 26.0743 229.257 26.8807 227.959 27.4183C226.933 26.9367 225.985 26.2871 225.116 25.4807C224.247 24.6743 223.491 23.7558 222.837 22.7366C221.81 23.0614 220.772 23.4982 219.745 24.0694C218.718 24.6295 217.77 25.2231 216.902 25.8391C216.033 26.4551 215.288 27.0487 214.667 27.6087C214.047 28.1687 213.596 28.5944 213.325 28.8632V50.4797C213.325 50.8045 213.415 51.107 213.607 51.4094C213.799 51.7006 214.058 51.9022 214.374 52.0142L220.309 53.3806L220.715 57.4127C219.091 57.3567 217.488 57.2783 215.92 57.1663C214.622 57.1663 213.268 57.1439 211.858 57.0879C210.447 57.0319 209.285 57.0095 208.36 57.0095C207.435 57.0095 206.374 57.0319 205.156 57.0879C203.937 57.1439 202.763 57.1663 201.624 57.1663C200.383 57.2783 199.074 57.3567 197.72 57.4127L198.126 53.3806L204.219 51.443L205.11 46.6044V24.0358H205.133Z" fill="#2D6EFA"/>
+      <path d="M248.394 28.5496C247.446 29.5688 246.318 30.3752 245.02 30.9688C243.768 30.3752 242.662 29.5688 241.692 28.5496C240.721 27.5303 239.875 26.3991 239.175 25.1671C240.913 22.2102 243.181 19.9253 246.002 18.3125C248.823 16.6996 252.016 15.8932 255.593 15.8932C257.489 15.8932 259.26 16.1396 260.919 16.6212C262.566 17.1029 264.022 17.8645 265.263 18.8837C266.504 19.9029 267.497 21.1686 268.23 22.6694C268.964 24.1702 269.325 25.9175 269.325 27.9111V50.4909C269.325 50.8158 269.415 51.107 269.607 51.3758C269.799 51.6446 270.081 51.8574 270.464 52.0254L274.605 53.3918L275.012 57.4239C273.601 57.3679 272.191 57.2895 270.792 57.1775C269.596 57.1775 268.366 57.1663 267.091 57.1327C265.816 57.1103 264.721 57.0879 263.796 57.0879C263.582 56.7631 263.39 56.4719 263.232 56.2031C263.017 55.9343 262.814 55.6543 262.622 55.3519C262.431 55.0607 262.261 54.7695 262.092 54.5007C260.524 55.8447 258.854 56.8639 257.094 57.5695C255.333 58.264 253.37 58.6224 251.204 58.6224C249.037 58.6224 247.277 58.3088 245.596 57.6927C243.915 57.0767 242.482 56.2143 241.285 55.1167C240.089 54.019 239.164 52.7086 238.487 51.2078C237.81 49.7069 237.472 48.0605 237.472 46.2908C237.472 44.2524 237.923 42.4043 238.814 40.7691C239.706 39.1338 240.936 37.7338 242.515 36.5802C244.084 35.4265 245.9 34.5193 247.954 33.8809C250.008 33.2313 252.208 32.9177 254.532 32.9177H261.189V28.8072C261.189 26.5447 260.512 24.7639 259.158 23.4422C257.804 22.1318 255.988 21.471 253.72 21.471C252.907 21.471 252.118 21.5494 251.362 21.7174C250.606 21.8742 249.85 22.1766 249.082 22.6022C249.41 23.0278 249.703 23.4646 249.974 23.8902C250.245 24.3158 250.515 24.7527 250.786 25.1783C250.132 26.4103 249.342 27.5415 248.394 28.5496ZM261.189 39.1114L255.017 39.3578C252.253 39.4698 250.087 40.1643 248.518 41.4523C246.95 42.7403 246.16 44.4316 246.16 46.5372C246.16 48.3629 246.781 49.9085 248.033 51.1742C249.274 52.4398 250.899 53.067 252.907 53.067C254.476 53.067 255.931 52.6526 257.252 51.8126C258.583 50.9838 259.892 49.8077 261.189 48.3069V39.1114Z" fill="#2D6EFA"/>
+    </svg>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <div class="tab on"  id="tab-focus"    onclick="switchTab('focus')">Focus Mapper</div>
+  <div class="tab"     id="tab-narrator" onclick="switchTab('narrator')">Narrator</div>
+  <div class="tab"     id="tab-contrast" onclick="switchTab('contrast')">Contrast</div>
+  <div class="tab"     id="tab-aria"     onclick="switchTab('aria')">ARIA Notes</div>
+</div>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- ═══ PANE 1: FOCUS MAPPER ═══ -->
+  <div class="pane on" id="pane-focus">
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-pip"></div><span class="sec-label">Selection</span>
+        <span class="sec-info" id="focus-sel-info">0 layers</span>
+      </div>
+      <div class="sel-bar">
+        <div class="sel-dot none" id="focus-dot"></div>
+        <span class="sel-count" id="focus-sel-count">None selected</span>
+        <span class="sel-names" id="focus-sel-names"></span>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">Tab Order Queue</span></div>
+      <p class="hint">Select layers in the order a keyboard user should navigate them, then click <strong>Draw Thread</strong>.</p>
+      <div class="fp-list" id="focus-list">
+        <div class="fp-empty">Select layers on canvas — they will appear here in order.</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">Thread Options</span></div>
+      <div class="grid2">
+        <div class="inp-wrap">
+          <span class="inp-label">Thread Colour</span>
+          <div class="inp-shell">
+            <input class="inp-in" type="color" id="thread-color" value="#2D6EFA"
+              style="width:32px;height:26px;padding:2px 3px;cursor:pointer;border:none;background:transparent;">
+            <span class="inp-unit" id="thread-color-hex">#2D6EFA</span>
+          </div>
+        </div>
+        <div class="inp-wrap">
+          <span class="inp-label">Line Style</span>
+          <div class="sel-shell">
+            <select class="sel-in" id="thread-style">
+              <option value="dashed">Dashed</option>
+              <option value="solid">Solid</option>
+            </select>
+            <svg class="sel-arrow" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec sec-last">
+      <div class="btn-row">
+        <button class="btn btn-prim" onclick="drawThread()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 12h10M19 7v10"/></svg>
+          Draw Thread
+        </button>
+        <button class="btn btn-danger" onclick="clearThread()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+          Clear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PANE 2: NARRATOR ═══ -->
+  <div class="pane" id="pane-narrator">
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-pip"></div><span class="sec-label">Audio Narrator</span>
+        <span class="sec-info" id="nar-count">0 entries</span>
+      </div>
+      <p class="hint">Select a frame, click <strong>Collect Text</strong>, then <strong>Play</strong> to hear your design narrated by the system voice. Uses ARIA labels where saved.</p>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">Narration Queue</span></div>
+      <div class="fp-list" id="nar-list">
+        <div class="fp-empty">Click "Collect Text" to build the narration queue.</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">Voice Settings</span></div>
+      <div class="grid2" style="margin-bottom:10px;">
+        <div class="inp-wrap">
+          <span class="inp-label">Speed</span>
+          <div class="inp-shell" style="padding:4px 10px;gap:8px;">
+            <input type="range" id="nar-rate" min="0.5" max="2" step="0.1" value="1"
+              style="flex:1;accent-color:var(--accent);"
+              oninput="document.getElementById('nar-rate-v').textContent=parseFloat(this.value).toFixed(1)+'x'">
+            <span class="inp-unit" id="nar-rate-v">1.0x</span>
+          </div>
+        </div>
+        <div class="inp-wrap">
+          <span class="inp-label">Pitch</span>
+          <div class="inp-shell" style="padding:4px 10px;gap:8px;">
+            <input type="range" id="nar-pitch" min="0.5" max="2" step="0.1" value="1"
+              style="flex:1;accent-color:var(--accent);"
+              oninput="document.getElementById('nar-pitch-v').textContent=parseFloat(this.value).toFixed(1)">
+            <span class="inp-unit" id="nar-pitch-v">1.0</span>
+          </div>
+        </div>
+      </div>
+      <div class="inp-wrap">
+        <span class="inp-label">Voice</span>
+        <div class="sel-shell">
+          <select class="sel-in" id="nar-voice"></select>
+          <svg class="sel-arrow" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec sec-last">
+      <div class="btn-row" style="margin-bottom:8px;">
+        <button class="btn btn-ghost" onclick="collectText()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Collect Text
+        </button>
+        <button class="btn btn-prim" id="btn-play" onclick="togglePlay()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5,3 19,12 5,21"/></svg>
+          Play
+        </button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger" onclick="stopNarrator()">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PANE 3: CONTRAST ═══ -->
+  <div class="pane" id="pane-contrast">
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-pip"></div><span class="sec-label">Contrast Check</span>
+        <span class="sec-info" id="ct-count">0 layers</span>
+      </div>
+      <p class="hint">Select a frame or text layers. FocusPath scans every text layer, calculates WCAG ratios, and lets you <strong>Heal</strong> failures with one click — pure math, no AI.</p>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">WCAG Target</span></div>
+      <div class="chips">
+        <div class="chip on" data-ratio="4.5" onclick="pickRatio(this)">AA · 4.5:1</div>
+        <div class="chip" data-ratio="3.0" onclick="pickRatio(this)">AA Large · 3:1</div>
+        <div class="chip" data-ratio="7.0" onclick="pickRatio(this)">AAA · 7:1</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">Results</span></div>
+      <div id="ct-results">
+        <div class="fp-list"><div class="fp-empty">Select layers and click "Scan" to check contrast.</div></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec sec-last">
+      <div class="btn-row">
+        <button class="btn btn-prim" onclick="scanContrast()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Scan Selection
+        </button>
+        <button class="btn btn-green" id="btn-heal-all" onclick="healAll()" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Heal All Failing
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PANE 4: ARIA NOTES ═══ -->
+  <div class="pane" id="pane-aria">
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-pip"></div><span class="sec-label">Selected Layer</span>
+        <span id="aria-saved-badge" style="display:none;"><span class="saved-badge">✓ Saved</span></span>
+      </div>
+      <div class="sel-bar">
+        <div class="sel-dot none" id="aria-dot"></div>
+        <span class="sel-count" id="aria-sel-name">No layer selected</span>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">ARIA Role</span></div>
+      <div class="chips">
+        <div class="chip" data-role="button"     onclick="pickRole(this)">button</div>
+        <div class="chip" data-role="link"       onclick="pickRole(this)">link</div>
+        <div class="chip" data-role="heading"    onclick="pickRole(this)">heading</div>
+        <div class="chip" data-role="img"        onclick="pickRole(this)">img</div>
+        <div class="chip" data-role="input"      onclick="pickRole(this)">input</div>
+        <div class="chip" data-role="checkbox"   onclick="pickRole(this)">checkbox</div>
+        <div class="chip" data-role="switch"     onclick="pickRole(this)">switch</div>
+        <div class="chip" data-role="dialog"     onclick="pickRole(this)">dialog</div>
+        <div class="chip" data-role="navigation" onclick="pickRole(this)">navigation</div>
+        <div class="chip" data-role="main"       onclick="pickRole(this)">main</div>
+        <div class="chip" data-role="none"       onclick="pickRole(this)">none</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">aria-label</span></div>
+      <div class="inp-shell" style="margin-bottom:10px;">
+        <input class="inp-in" id="aria-label-inp" type="text"
+          placeholder='e.g. "Close dialog" or "Submit form"' maxlength="200">
+      </div>
+      <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">aria-description</span></div>
+      <div class="ta-shell">
+        <textarea class="ta-in" id="aria-desc-inp"
+          placeholder="Optional: additional context for screen readers..." maxlength="500"></textarea>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec">
+      <div class="toggle-row">
+        <span class="toggle-lbl">aria-hidden (hide from screen readers)</span>
+        <div class="toggle" id="aria-hidden-tog" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="sec sec-last">
+      <div class="btn-row" style="margin-bottom:8px;">
+        <button class="btn btn-prim" onclick="saveAria()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save to Layer
+        </button>
+        <button class="btn btn-ghost" onclick="exportJson()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export JSON
+        </button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger" onclick="clearAllAria()">Clear All ARIA from Page</button>
+      </div>
+      <div id="aria-json-wrap" style="display:none;margin-top:14px;">
+        <div class="sec-head"><div class="sec-pip"></div><span class="sec-label">JSON Export Preview</span></div>
+        <div class="code-box">
+          <button class="code-copy" id="json-copy-btn" onclick="copyJson()">Copy</button>
+          <pre id="aria-json-pre"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<!-- FOOTER — same as ClampType -->
+<footer class="ftr">
+  <span class="ftr-copy"><b>Copyright Elustra 2026</b> · Mithil Mogare</span>
+  <a class="wa-btn" href="https://wa.me/918888241144?text=Hi%21%20I%20need%20help%20with%20FocusPath." target="_blank" rel="noopener">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a9 9 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.125.557 4.12 1.529 5.855L0 24l6.335-1.51A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.945 9.945 0 0 1-5.193-1.374L3 21.5l.893-3.667A9.959 9.959 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+    Contact Us
+  </a>
+</footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+var S = {
+  focusOrder:    [],   // [{id,name,type}]
+  narEntries:    [],   // [{order,label,role,name}]
+  narIdx:        0,
+  narPlaying:    false,
+  contrastRatio: 4.5,
+  contrastRes:   [],
+  ariaRole:      '',
+  ariaJson:      '',
+  currentId:     null,
+  selItems:      []
+};
+
+// ── TAB SWITCH ─────────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
+  document.getElementById('tab-'+id).classList.add('on');
+  document.getElementById('pane-'+id).classList.add('on');
+  if (id === 'aria' && S.currentId) post({ type:'get-aria', nodeId:S.currentId });
+}
+
+// ── PLUGIN MESSAGES ────────────────────────────────────────────────────────────
+window.onmessage = function(evt) {
+  var msg = evt.data.pluginMessage;
+  if (!msg) return;
+  switch(msg.type) {
+    case 'selection-update':    onSelection(msg);    break;
+    case 'success':             toast(msg.text,'ok'); break;
+    case 'error':               toast(msg.text,'err');break;
+    case 'focus-thread-done':   break;
+    case 'narrator-text-ready': onNarReady(msg.entries); break;
+    case 'contrast-results':    onCtResults(msg.results, msg.message); break;
+    case 'heal-applied':        setTimeout(scanContrast,400); break;
+    case 'aria-data':           onAriaData(msg); break;
+    case 'aria-saved':          document.getElementById('aria-saved-badge').style.display='block'; break;
+    case 'aria-json-ready':     onAriaJson(msg.json, msg.count); break;
+  }
+};
+function post(msg){ parent.postMessage({ pluginMessage: msg }, '*'); }
+
+// ── SELECTION ──────────────────────────────────────────────────────────────────
+function onSelection(msg) {
+  S.selItems = msg.items || [];
+  var c = msg.count;
+
+  // Focus pane
+  var fd = document.getElementById('focus-dot');
+  fd.className = 'sel-dot' + (c > 0 ? '' : ' none');
+  document.getElementById('focus-sel-count').textContent = c > 0 ? c+' layer'+(c>1?'s':'')+' selected' : 'None selected';
+  document.getElementById('focus-sel-names').textContent = S.selItems.map(function(i){return i.name;}).join(', ');
+  document.getElementById('focus-sel-info').textContent  = c+' layer'+(c!==1?'s':'');
+
+  // ARIA pane
+  var ad = document.getElementById('aria-dot');
+  if (c === 1) {
+    ad.className = 'sel-dot';
+    document.getElementById('aria-sel-name').textContent = S.selItems[0].name;
+    S.currentId = S.selItems[0].id;
+    post({ type:'get-aria', nodeId:S.currentId });
+  } else {
+    ad.className = 'sel-dot none';
+    document.getElementById('aria-sel-name').textContent = c===0 ? 'No layer selected' : c+' layers (select one)';
+    S.currentId = null;
+    document.getElementById('aria-saved-badge').style.display='none';
+  }
+
+  // Auto-populate focus order from selection
+  if (c > 0) {
+    S.focusOrder = S.selItems.map(function(i){ return {id:i.id,name:i.name,type:i.type}; });
+  }
+  renderFocusList();
+}
+
+// ── FOCUS MAPPER ──────────────────────────────────────────────────────────────
+function renderFocusList() {
+  var el = document.getElementById('focus-list');
+  if (!S.focusOrder.length) {
+    el.innerHTML='<div class="fp-empty">Select layers on canvas — they will appear here in order.</div>'; return;
+  }
+  var h = '';
+  S.focusOrder.forEach(function(item,idx){
+    h += '<div class="fp-item">' +
+      '<div class="fp-num">'+(idx+1)+'</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div class="fp-name">'+esc(item.name)+'</div>' +
+        '<div class="fp-type">'+item.type.toLowerCase()+'</div>' +
+      '</div>' +
+      '<button class="fp-del" onclick="removeFocus('+idx+')" title="Remove">&#x2715;</button>' +
+    '</div>';
+  });
+  el.innerHTML = h;
+}
+function removeFocus(idx){ S.focusOrder.splice(idx,1); renderFocusList(); }
+function drawThread(){
+  if(!S.focusOrder.length){ toast('Select layers first.','err'); return; }
+  post({ type:'draw-focus-thread', nodeIds:S.focusOrder.map(function(i){return i.id;}), options:{ color:document.getElementById('thread-color').value }});
+}
+function clearThread(){ S.focusOrder=[]; renderFocusList(); post({type:'clear-focus-thread'}); }
+document.getElementById('thread-color').addEventListener('input',function(){
+  document.getElementById('thread-color-hex').textContent = this.value.toUpperCase();
+});
+
+// ── NARRATOR ──────────────────────────────────────────────────────────────────
+function loadVoices(){
+  if(!window.speechSynthesis) return;
+  var sel = document.getElementById('nar-voice');
+  var voices = speechSynthesis.getVoices();
+  if(!voices.length){ sel.innerHTML='<option>Default</option>'; return; }
+  sel.innerHTML='';
+  voices.forEach(function(v,i){
+    var o=document.createElement('option');
+    o.value=i; o.textContent=v.name+' ('+v.lang+')';
+    sel.appendChild(o);
+  });
+}
+if(window.speechSynthesis){
+  if(speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged=loadVoices;
+  loadVoices();
+}
+
+function collectText(){ post({ type:'collect-narrator-text', nodeIds:S.selItems.map(function(i){return i.id;}) }); }
+
+function onNarReady(entries){
+  S.narEntries=entries; S.narIdx=0;
+  document.getElementById('nar-count').textContent = entries.length+' entr'+(entries.length===1?'y':'ies');
+  var el=document.getElementById('nar-list');
+  if(!entries.length){ el.innerHTML='<div class="fp-empty">No text or ARIA labels found in selection.</div>'; return; }
+  var h='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r);overflow:hidden;">';
+  entries.forEach(function(e,i){
+    h+='<div class="nar-item"><div class="nar-badge">'+(i+1)+'</div><div style="flex:1;"><div class="nar-text">'+esc(e.label)+'</div>'+(e.role?'<div class="nar-role">role: '+e.role+'</div>':'')+'</div></div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+function togglePlay(){ S.narPlaying ? pauseNar() : playNar(); }
+function playNar(){
+  if(!window.speechSynthesis){ toast('Speech not available.','err'); return; }
+  if(!S.narEntries.length){ toast('Collect text first.','err'); return; }
+  S.narPlaying=true;
+  document.getElementById('btn-play').innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause';
+  speakNext();
+}
+function speakNext(){
+  if(!S.narPlaying || S.narIdx>=S.narEntries.length){ stopNarrator(); return; }
+  var e=S.narEntries[S.narIdx];
+  var phrase=(e.role?e.role+': ':'')+e.label;
+  var u=new SpeechSynthesisUtterance(phrase);
+  u.rate  = parseFloat(document.getElementById('nar-rate').value)||1;
+  u.pitch = parseFloat(document.getElementById('nar-pitch').value)||1;
+  var voices=speechSynthesis.getVoices();
+  var vi=parseInt(document.getElementById('nar-voice').value);
+  if(!isNaN(vi)&&voices[vi]) u.voice=voices[vi];
+  u.onend=function(){ S.narIdx++; speakNext(); };
+  u.onerror=function(){ S.narIdx++; speakNext(); };
+  speechSynthesis.speak(u);
+}
+function pauseNar(){
+  S.narPlaying=false;
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  document.getElementById('btn-play').innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5,3 19,12 5,21"/></svg> Play';
+}
+function stopNarrator(){
+  S.narPlaying=false; S.narIdx=0;
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  document.getElementById('btn-play').innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5,3 19,12 5,21"/></svg> Play';
+}
+
+// ── CONTRAST ──────────────────────────────────────────────────────────────────
+function pickRatio(el){
+  document.querySelectorAll('#pane-contrast .chip').forEach(function(c){c.classList.remove('on');});
+  el.classList.add('on'); S.contrastRatio=parseFloat(el.dataset.ratio);
+}
+function scanContrast(){
+  post({ type:'check-contrast', nodeIds:S.selItems.map(function(i){return i.id;}) });
+}
+function onCtResults(results, message){
+  S.contrastRes=results||[];
+  document.getElementById('ct-count').textContent=S.contrastRes.length+' layer'+(S.contrastRes.length!==1?'s':'');
+  var failCount=S.contrastRes.filter(function(r){return !r.passes;}).length;
+  document.getElementById('btn-heal-all').disabled=failCount===0;
+  var wrap=document.getElementById('ct-results');
+  if(!S.contrastRes.length){
+    wrap.innerHTML='<div class="fp-list"><div class="fp-empty">'+(message||'No text layers found.')+'</div></div>'; return;
+  }
+  var h='<div class="ct-wrap"><div class="ct-hdr-row"><div class="ct-hdr">Layer</div><div class="ct-hdr">Ratio</div><div class="ct-hdr">WCAG</div><div class="ct-hdr">Colours</div><div class="ct-hdr">Action</div></div>';
+  S.contrastRes.forEach(function(r){
+    h+='<div class="ct-row">'+
+      '<div class="ct-name" title="'+esc(r.name)+'">'+esc(r.name)+'</div>'+
+      '<div class="ct-ratio" style="color:'+(r.passes?'var(--green)':'var(--red)')+'">'+r.ratio+':1</div>'+
+      '<div class="ct-cell"><span class="ct-badge '+(r.passes?'pass':'fail')+'">'+(r.passes?'PASS':'FAIL')+'</span></div>'+
+      '<div class="ct-cell" style="display:flex;gap:3px;align-items:center;">'+
+        '<span class="ct-swatch" style="background:'+r.textColor+'" title="Text '+r.textColor+'"></span>'+
+        '<span class="ct-swatch" style="background:'+r.bgColor+'" title="BG '+r.bgColor+'"></span>'+
+      '</div>'+
+      '<div class="ct-cell">'+(!r.passes?'<button class="ct-heal" onclick="healOne(\''+r.id+'\')">Heal</button>':'<span style="font-size:10px;color:var(--green);">&#x2713; OK</span>')+'</div>'+
+    '</div>';
+  });
+  h+='</div>';
+  wrap.innerHTML=h;
+}
+function healOne(nodeId){ post({type:'heal-contrast', nodeId:nodeId, targetRatio:S.contrastRatio}); }
+function healAll(){ S.contrastRes.filter(function(r){return !r.passes;}).forEach(function(r){ healOne(r.id); }); }
+
+// ── ARIA NOTES ─────────────────────────────────────────────────────────────────
+function pickRole(el){
+  document.querySelectorAll('#pane-aria .chip').forEach(function(c){c.classList.remove('on');});
+  el.classList.add('on'); S.ariaRole=el.dataset.role;
+}
+function onAriaData(msg){
+  var d=msg.data;
+  if(!d) return;
+  document.getElementById('aria-label-inp').value=d.label||'';
+  document.getElementById('aria-desc-inp').value=d.description||'';
+  var tog=document.getElementById('aria-hidden-tog');
+  d.hidden ? tog.classList.add('on') : tog.classList.remove('on');
+  S.ariaRole=d.role||'';
+  document.querySelectorAll('#pane-aria .chip').forEach(function(c){
+    c.classList.toggle('on', c.dataset.role===d.role);
+  });
+  var has=d.label||d.role||d.description;
+  document.getElementById('aria-saved-badge').style.display=has?'block':'none';
+}
+function saveAria(){
+  if(!S.currentId){ toast('Select a single layer first.','err'); return; }
+  post({ type:'save-aria', nodeId:S.currentId, ariaData:{
+    label:       document.getElementById('aria-label-inp').value.trim(),
+    role:        S.ariaRole,
+    description: document.getElementById('aria-desc-inp').value.trim(),
+    hidden:      document.getElementById('aria-hidden-tog').classList.contains('on')
+  }});
+}
+function exportJson(){ post({type:'export-aria-json'}); }
+function onAriaJson(json, count){
+  S.ariaJson=json;
+  var wrap=document.getElementById('aria-json-wrap');
+  wrap.style.display='block';
+  document.getElementById('aria-json-pre').textContent=json;
+  toast('Exported '+count+' layer'+(count!==1?'s':''),'ok');
+}
+function copyJson(){
+  if(!S.ariaJson) return;
+  var btn=document.getElementById('json-copy-btn');
+  function done(){ btn.textContent='✓ Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); },2000); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(S.ariaJson).then(done); }
+  else{ var t=document.createElement('textarea'); t.value=S.ariaJson; t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); done(); }
+}
+function clearAllAria(){
+  post({type:'clear-all-aria'});
+  document.getElementById('aria-json-wrap').style.display='none';
+  document.getElementById('aria-label-inp').value='';
+  document.getElementById('aria-desc-inp').value='';
+  document.getElementById('aria-hidden-tog').classList.remove('on');
+  document.querySelectorAll('#pane-aria .chip').forEach(function(c){c.classList.remove('on');});
+  document.getElementById('aria-saved-badge').style.display='none';
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────────
+function toast(text,type){
+  var t=document.getElementById('toast');
+  t.textContent=text;
+  t.className='toast show'+(type==='ok'?' ok':type==='err'?' err':'');
+  clearTimeout(t._t);
+  t._t=setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+post({type:'get-selection'});
+</script>
+</body>
+</html>
